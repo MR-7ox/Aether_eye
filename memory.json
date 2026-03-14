@@ -1,0 +1,15 @@
+{
+  "people": {
+    "alan": "You know alan",
+    "ajas": "You know ajas",
+    "adhil": "You know adhil",
+    "ajas.jpeg": "Known person",
+    "alan.jpeg": "Known person",
+    "deva": "Known person"
+  },
+  "places": {
+    "bedroom": "Your bedroom",
+    "classroom": "Your classroom",
+    "hostel room": "Known place"
+  }
+}

@@ -6,6 +6,7 @@ import face_recognition
 from PIL import Image
 from dotenv import load_dotenv
 from google import genai
+import pyttsx3
 
 # ------------------ LOAD ENV ------------------
 load_dotenv()
@@ -17,6 +18,11 @@ if not GEMINI_API_KEY:
 # ------------------ GEMINI CLIENT ------------------
 client = genai.Client(api_key=GEMINI_API_KEY)
 MODEL_NAME = "models/gemini-2.5-flash"
+
+# ------------------ TEXT TO SPEECH ------------------
+tts = pyttsx3.init()
+tts.setProperty("rate", 170)   # speaking speed (friendly)
+tts.setProperty("volume", 1.0)
 
 # ------------------ LOAD KNOWN FACES ------------------
 known_face_encodings = []
@@ -38,11 +44,12 @@ print("✅ Loaded known faces:", known_face_names)
 
 # ------------------ CAMERA ------------------
 cap = cv2.VideoCapture(0)
-
 if not cap.isOpened():
     raise RuntimeError("❌ Webcam not accessible")
 
 print("✅ Visual Assistance System Started (Press Q to quit)")
+
+last_spoken = ""   # prevents repeating same sentence
 
 # ------------------ MAIN LOOP ------------------
 while True:
@@ -50,14 +57,11 @@ while True:
     if not ret:
         break
 
-    # Convert frame
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     # ------------------ FACE RECOGNITION ------------------
     face_locations = face_recognition.face_locations(rgb_frame)
-    face_encodings = face_recognition.face_encodings(
-        rgb_frame, face_locations
-    )
+    face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
 
     detected_person = "Unknown"
 
@@ -75,12 +79,14 @@ while True:
     img = Image.fromarray(rgb_frame)
 
     context = f"""
-You are a visual assistance system for a blind user.
+You are a visual assistant for a blind user.
 
 Detected person: {detected_person}
 
-Focus on safety, spatial awareness, and actions.
-Speak clearly and calmly.
+Speak in ONE short, friendly sentence.
+Be conversational and reassuring.
+Mention the person by name if known.
+Focus only on what is important right now.
 """
 
     response = client.models.generate_content(
@@ -88,15 +94,23 @@ Speak clearly and calmly.
         contents=[context, img]
     )
 
-    print("🧠 Assistant:", response.text)
+    text = response.text.strip()
+    print("🧠 Assistant:", text)
+
+    # ------------------ SPEAK (ONLY IF NEW) ------------------
+    if text and text != last_spoken:
+        tts.say(text)
+        tts.runAndWait()
+        last_spoken = text
 
     # Quit condition
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-    time.sleep(2)
+    time.sleep(3)  # slower loop for comfort
 
 # ------------------ CLEANUP ------------------
 cap.release()
 cv2.destroyAllWindows()
+tts.stop()
 print("🛑 Visual Assistance System Stopped")
